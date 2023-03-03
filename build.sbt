@@ -11,6 +11,7 @@ ThisBuild / scalaVersion := "2.12.17"
 
 // 1.16.1, 1.15.3, 1.17-snapshot
 val flinkVersion = "1.16.1"
+val breezeVersion = "0.13.2"
 
 val flinkDependencies = Seq(
   "org.apache.flink" % "flink-clients" % flinkVersion % "provided",
@@ -21,7 +22,9 @@ val flinkDependencies = Seq(
 
 lazy val root = (project in file(".")).
   settings(
-    libraryDependencies ++= flinkDependencies
+    libraryDependencies ++= flinkDependencies,
+    libraryDependencies += "org.scalanlp" %% "breeze" % breezeVersion,
+    libraryDependencies += "org.scalanlp" %% "breeze-natives" % breezeVersion,
   )
 
 // make run command include the provided dependencies
