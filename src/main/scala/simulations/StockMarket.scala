@@ -29,8 +29,6 @@ import org.apache.flink.types.NullValue
 import org.apache.flink.api.common.functions.MapFunction
 
 import scala.util.Random
-// import org.slf4j.Logger
-// import org.slf4j.LoggerFactory
 import org.apache.flink.connector.file.src.FileSource
 import org.apache.flink.connector.file.src.reader.TextLineInputFormat
 import org.apache.flink.core.fs.Path
@@ -40,8 +38,6 @@ import org.apache.flink.api.java.io.TextInputFormat
 object StockMarket {
 
   def main(args: Array[String]): Unit = {
-	  // val LOG: Logger = LoggerFactory.getLogger("root")
-
     // set up the execution environment
     val env = ExecutionEnvironment.getExecutionEnvironment
 
@@ -187,12 +183,10 @@ object StockMarket {
 
         override def compute(vertex: Vertex[LongValue, Array[Array[Double]]], messages: MessageIterator[Array[Array[Double]]]): Unit = {
             val state = vertex.getValue().asInstanceOf[Array[Array[Double]]]
-            assert(state.size == 5)
-            // logger.info("State size is " + state.size)
+            // assert(state.size == 5)
             var stock_timeseries: Array[Double] = state(0)
             var marketState: Array[Double] = state(1)
-            assert(marketState.size == 7)
-            // logger.info("market state size is " + marketState.size)
+            // assert(marketState.size == 7)
             var lastDividend: Double = marketState(0)
             var lastAvg: Double = marketState(1)
             var currentPrice: Double = marketState(2)
@@ -202,8 +196,7 @@ object StockMarket {
             var recent100AvgInc: Double = marketState(6)       
             var timer: Double = state(2).head
             var traderState: Array[Double] = state(3)
-            assert(traderState.size == 3)
-            // logger.info("trader state size is " + traderState.size)
+            // assert(traderState.size == 3)
             var cash: Double = traderState(0)
             var shares: Double = traderState(1)
             var estimatedWealth: Double = traderState(2)
@@ -211,7 +204,7 @@ object StockMarket {
             val rules: Array[Double] = state(4)
             var lastRule: Int = rules(5).toInt
             var nextAction: Int = rules(6).toInt
-            assert(rules.size == 7)
+            // assert(rules.size == 7)
 
             timer += 1 
             if (vertex.getId().getValue != 0) {  // trader 

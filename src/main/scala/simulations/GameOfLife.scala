@@ -29,8 +29,6 @@ import org.apache.flink.types.NullValue
 import org.apache.flink.api.common.functions.MapFunction
 
 import scala.util.Random
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import org.apache.flink.connector.file.src.FileSource
 import org.apache.flink.connector.file.src.reader.TextLineInputFormat
 import org.apache.flink.core.fs.Path
@@ -48,8 +46,6 @@ import org.apache.flink.api.java.io.TextInputFormat
  */
 object GameOfLife {
   def main(args: Array[String]): Unit = {
-	  val LOG: Logger = LoggerFactory.getLogger("root")
-
     // set up the execution environment
     val env = ExecutionEnvironment.getExecutionEnvironment
     env.setParallelism(args(0).toInt)
@@ -85,7 +81,6 @@ object GameOfLife {
           var aliveNeighbors: Int = 0
 
           while (messages.hasNext) {
-              LOG.info("Received a combined message inside compute function!")
               val msg = messages.next
               aliveNeighbors += msg
           }
@@ -112,14 +107,11 @@ object GameOfLife {
         override def combineMessages(messages: MessageIterator[Int]): Unit = {
 
             var combined: Int = 0
-            var totalMsgs: Int = 0
 
             while (messages.hasNext) {
               val msg = messages.next
-              totalMsgs += 1
               combined = msg + combined
             }
-            LOG.info("Combined value is " + combined + " total messages " + totalMsgs)
             sendCombinedMessage(combined)
         }
     }
