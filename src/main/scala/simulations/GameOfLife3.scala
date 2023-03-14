@@ -105,11 +105,17 @@ object GameOfLife3 {
                     }
                 }
             } else { // clock
+              if (idleCountDown > 1) {
+                idleCountDown -= 1
+                sendMessageTo(vertex.getId(), Array(0))
+              } else {
+                idleCountDown = interval
                 val it = getEdges.iterator()
                 while (it.hasNext) {
-                    val edge = it.next
-                    sendMessageTo(edge.getTarget, Array(0))
+                  val edge = it.next
+                  sendMessageTo(edge.getTarget, Array(0))
                 }
+              }
             }
       }
     }

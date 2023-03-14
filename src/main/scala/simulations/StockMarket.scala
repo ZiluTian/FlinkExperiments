@@ -212,47 +212,41 @@ object StockMarket {
             timer += 1 
             if (vertex.getId().getValue != 0) {  // trader 
                 cash = cash * (1 + interestRate)
-                if (idleCountDown > 1) {
-                    idleCountDown -= 1
-                } else {
-                    messages.forEach(m => {
-                        val ms = m.head
-                        val m_dividendPerShare = ms(0)
-                        val m_lastAvg = ms(1)
-                        val m_currentPrice = ms(2)
-                        val m_dividendIncrease = ms(3)
-                        val m_recent10AvgInc = ms(4)
-                        val m_recent50AvgInc = ms(5)    
-                        val m_recent100AvgInc = ms(6)    
-                        val previousWealth = estimatedWealth
-                        // Update the number of shares based on the new dividend
-                        shares = shares * (1 + m_dividendPerShare)
-                        // Calculate the new estimated wealth 
-                        estimatedWealth = cash + shares * m_currentPrice
-                        // Update the strength of prev action based on the feedback of the wealth changes
-                        if (estimatedWealth > previousWealth) {
-                            rules(lastRule) += 1
-                        } else if (estimatedWealth < previousWealth) {
-                            rules(lastRule) -= 1
-                        }
-                        // Select the rule with the highest strength for the next action 
-                        val nextRule = rules.zipWithIndex.sortBy(x => x._1).head._2
-                        // Obtain the action based on the rule 
-                        val x = evalRule(nextRule, m_currentPrice, ms, cash, shares)
-                        // Update lastRule with the recently selected rule 
-                        rules(5) = nextRule
-                        // Update the last action, cash, and shares
-                        rules(6) = x._1
-                        cash = x._2
-                        shares = x._3 
-                    })
-                    idleCountDown = interval
-
-                    val it = getEdges.iterator()
-                    while (it.hasNext) {
-                        val edge = it.next
-                        Range(0, cfreq).foreach(i => sendMessageTo(edge.getTarget, Array(Array(rules(6)))))
+                messages.forEach(m => {
+                    val ms = m.head
+                    val m_dividendPerShare = ms(0)
+                    val m_lastAvg = ms(1)
+                    val m_currentPrice = ms(2)
+                    val m_dividendIncrease = ms(3)
+                    val m_recent10AvgInc = ms(4)
+                    val m_recent50AvgInc = ms(5)    
+                    val m_recent100AvgInc = ms(6)    
+                    val previousWealth = estimatedWealth
+                    // Update the number of shares based on the new dividend
+                    shares = shares * (1 + m_dividendPerShare)
+                    // Calculate the new estimated wealth 
+                    estimatedWealth = cash + shares * m_currentPrice
+                    // Update the strength of prev action based on the feedback of the wealth changes
+                    if (estimatedWealth > previousWealth) {
+                        rules(lastRule) += 1
+                    } else if (estimatedWealth < previousWealth) {
+                        rules(lastRule) -= 1
                     }
+                    // Select the rule with the highest strength for the next action 
+                    val nextRule = rules.zipWithIndex.sortBy(x => x._1).head._2
+                    // Obtain the action based on the rule 
+                    val x = evalRule(nextRule, m_currentPrice, ms, cash, shares)
+                    // Update lastRule with the recently selected rule 
+                    rules(5) = nextRule
+                    // Update the last action, cash, and shares
+                    rules(6) = x._1
+                    cash = x._2
+                    shares = x._3 
+                })
+                val it = getEdges.iterator()
+                while (it.hasNext) {
+                    val edge = it.next
+                    Range(0, cfreq).foreach(i => sendMessageTo(edge.getTarget, Array(Array(rules(6)))))
                 }
             } else {    // market
                 var buyOrders: Int = 0
@@ -292,10 +286,16 @@ object StockMarket {
                 // Calculate whether avg has increased for past 100 rounds
                 recent100AvgInc = update(100, timer, lastAvg, stock_timeseries)
                 // Send messages to traders
-                val it = getEdges.iterator()
-                while (it.hasNext) {
-                    val edge = it.next
-                    Range(0, cfreq).foreach(i => sendMessageTo(edge.getTarget, Array(Array(lastDividend, lastAvg, currentPrice, dividendIncrease, recent10AvgInc, recent50AvgInc, recent100AvgInc))))
+                if (idleCountDown <= 1) {
+                    idleCountDown = interval
+                    val it = getEdges.iterator()
+                    while (it.hasNext) {
+                        val edge = it.next
+                        Range(0, cfreq).foreach(i => sendMessageTo(edge.getTarget, Array(Array(lastDividend, lastAvg, currentPrice, dividendIncrease, recent10AvgInc, recent50AvgInc, recent100AvgInc))))
+                    }
+                } else {
+                    idleCountDown -= 1
+                    sendMessageTo(vertex.getId(), Array(Array(0)))
                 }
             }
             setNewVertexValue(Array(stock_timeseries, Array(lastDividend, lastAvg, currentPrice, dividendIncrease, recent10AvgInc, recent50AvgInc, recent100AvgInc), Array(timer), 

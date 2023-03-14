@@ -183,9 +183,6 @@ object Epidemics {
           var idleCountDown: Int = state(5)
 
           if (vertex.getId().getValue != 0) { // people
-            if (idleCountDown > 1) {
-              idleCountDown -= 1
-            } else {
               if (health != Deceased) {
                 if ((health != Susceptible) && (health != Recover)) {
                     if (daysInfected == stateDuration(health)) {
@@ -210,7 +207,6 @@ object Epidemics {
                     }
                 }
 
-                idleCountDown = interval
                 val SymptomaticBool: Boolean = if (symptomatic == 1) true else false
                 // Calculate infectiousness once
                 val infectious: Double = infectiousness(health.toInt, SymptomaticBool)
@@ -223,16 +219,21 @@ object Epidemics {
                   )
                 }
               }
-            }
-            setNewVertexValue(Array(age, symptomatic, health, vulnerability, daysInfected, idleCountDown))            
           } else {  // clock vertex
             // setNewVertexValue(state)
-            val it = getEdges.iterator()
-            while (it.hasNext) {
-              val edge = it.next
-              sendMessageTo(edge.getTarget, Array(0))
-            }
+            if (idleCountDown > 1) {
+              idleCountDown -= 1
+              sendMessageTo(vertex.getId(), Array(0))
+            } else {
+              idleCountDown = interval
+              val it = getEdges.iterator()
+              while (it.hasNext) {
+                val edge = it.next
+                sendMessageTo(edge.getTarget, Array(0))
+              }
           }
+        }
+        setNewVertexValue(Array(age, symptomatic, health, vulnerability, daysInfected, idleCountDown))            
       }
     }
 
