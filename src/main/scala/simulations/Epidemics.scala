@@ -77,7 +77,7 @@ object Epidemics {
           val health: Int = if (Random.nextInt(100)==0) 2 else 0
           val vulnerability: Int = if (age > 60) 1 else 0
           val daysInfected: Int = 0
-          Array(age, symptomatic, health, vulnerability, daysInfected)
+          Array(age, symptomatic, health, vulnerability, daysInfected, interval)
         }
       }
     )
