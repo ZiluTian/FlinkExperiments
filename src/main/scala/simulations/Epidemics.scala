@@ -54,7 +54,9 @@ object Epidemics {
     val env = ExecutionEnvironment.getExecutionEnvironment
     env.setParallelism(args(0).toInt)
     val edgeFilePath = args(1)
-  
+    val cfreq: Int = args(2).toInt
+    val interval: Int = args(3).toInt
+
     // Graph<K, VV, EV>    
     // Update the path to the input edge file 
     val edgeDataset: DataSet[Edge[LongValue, Int]] = env.readTextFile(edgeFilePath).map(
@@ -178,43 +180,52 @@ object Epidemics {
           var health: Int = state(2)
           val vulnerability: Int = state(3)
           var daysInfected: Int = state(4)
+          var idleCountDown: Int = state(5)
 
-          if (vertex.getId().getValue != 0) {
-            if (health != Deceased) {
-              if ((health != Susceptible) && (health != Recover)) {
-                  if (daysInfected == stateDuration(health)) {
-                      // health = 4
-                      health = change(health, vulnerability)
-                      daysInfected = 0
-                  } else {
-                      daysInfected = daysInfected + 1
-                  }
-              }
-
-
-              while (messages.hasNext) {
-                  val m: Double = messages.next.head
-                  if (health==0) {
-                    var risk: Double = m
-                    if (age > 60) {
-                      risk = risk * 2
-                    } 
-                    if (risk > 1) {
-                      health = change(health, vulnerability)
+          if (vertex.getId().getValue != 0) { // people
+            if (idleCountDown > 1) {
+              idleCountDown -= 1
+            } else {
+              if (health != Deceased) {
+                if ((health != Susceptible) && (health != Recover)) {
+                    if (daysInfected == stateDuration(health)) {
+                        // health = 4
+                        health = change(health, vulnerability)
+                        daysInfected = 0
+                    } else {
+                        daysInfected = daysInfected + 1
                     }
-                  }
+                }
+
+                while (messages.hasNext) {
+                    val m: Double = messages.next.head
+                    if (health==0) {
+                      var risk: Double = m
+                      if (age > 60) {
+                        risk = risk * 2
+                      } 
+                      if (risk > 1) {
+                        health = change(health, vulnerability)
+                      }
+                    }
+                }
+
+                idleCountDown = interval
+                val SymptomaticBool: Boolean = if (symptomatic == 1) true else false
+                // Calculate infectiousness once
+                val infectious: Double = infectiousness(health.toInt, SymptomaticBool)
+
+                val it = getEdges.iterator()
+                while (it.hasNext) {
+                  val edge = it.next
+                  Range(0, cfreq).foreach(i => 
+                    sendMessageTo(edge.getTarget, Array(infectious))
+                  )
+                }
               }
             }
-            setNewVertexValue(Array(age, symptomatic, health, vulnerability, daysInfected))
-
-            val SymptomaticBool: Boolean = if (symptomatic == 1) true else false
-            
-            val it = getEdges.iterator()
-            while (it.hasNext) {
-              val edge = it.next
-              sendMessageTo(edge.getTarget, Array(infectiousness(health.toInt, SymptomaticBool)))
-            }
-          } else {
+            setNewVertexValue(Array(age, symptomatic, health, vulnerability, daysInfected, idleCountDown))            
+          } else {  // clock vertex
             // setNewVertexValue(state)
             val it = getEdges.iterator()
             while (it.hasNext) {
@@ -241,11 +252,10 @@ object Epidemics {
         }
     }
 
-    // Execute the vertex-centric iteration
-    val result = graph.runVertexCentricIteration(new EpidemicsComputeFunction(), new EpidemicsCombiner(), maxIterations)
-
-    // Extract the vertices as the result
-    val simResult = result.getVertices
-    simResult.collect()
+    measure(() => {
+      val result = graph.runVertexCentricIteration(new EpidemicsComputeFunction(), new EpidemicsCombiner(), maxIterations)
+      val simResult = result.getVertices
+      simResult.collect()
+    }, maxIterations)
   }
 }

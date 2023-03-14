@@ -116,13 +116,10 @@ object GameOfLife2 {
         }
     }
 
-    // // // Execute the vertex-centric iteration
-    val result = graph.runVertexCentricIteration(new GoLComputeFunction(), new GoLCombiner(), maxIterations)
-
-    // // // Extract the vertices as the result
-    val golResult = result.getVertices
-
-    // // execute
-    golResult.collect()
+    measure(() => {
+      val result = graph.runVertexCentricIteration(new GoLComputeFunction(), new GoLCombiner(), maxIterations)
+      val golResult = result.getVertices
+      golResult.collect()
+    }, maxIterations)
   }
 }

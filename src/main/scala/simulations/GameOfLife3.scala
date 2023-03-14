@@ -44,13 +44,15 @@ import org.apache.flink.api.java.io.TextInputFormat
  *   - write a simple Flink program.
  *   - write and use user-defined functions.
  */
-object GameOfLife {
+object GameOfLife3 {
   def main(args: Array[String]): Unit = {
     // set up the execution environment
     val env = ExecutionEnvironment.getExecutionEnvironment
     env.setParallelism(args(0).toInt)
     val edgeFilePath = args(1)
-  
+    val cfreq: Int = args(2).toInt
+    val interval: Int = args(3).toInt
+
     // Graph<K, VV, EV>    
     // Update the path to the input edge file 
     val edgeDataset: DataSet[Edge[LongValue, Int]] = env.readTextFile(edgeFilePath).map(
@@ -63,64 +65,77 @@ object GameOfLife {
         }
     })
 
-    val graph: Graph[LongValue, Int, Int] = Graph.fromDataSet(edgeDataset, env).mapVertices( 
-      new MapFunction[Vertex[LongValue, NullValue], Int]() { 
-        def map(value: Vertex[LongValue, NullValue]): Int =  
-          if (Random.nextBoolean()) 1 else 0
+    val graph: Graph[LongValue, Array[Int], Int] = Graph.fromDataSet(edgeDataset, env).mapVertices(
+      new MapFunction[Vertex[LongValue, NullValue], Array[Int]]() {
+        def map(value: Vertex[LongValue, NullValue]): Array[Int] =  
+          if (Random.nextBoolean()) Array(1, interval) else Array(0, interval)
         }
       )
-
 
     // define the maximum number of iterations
     val maxIterations = 200
 
-    final class GoLComputeFunction extends ComputeFunction[LongValue, Int, Int, Int] {
+    final class GoLComputeFunction extends ComputeFunction[LongValue, Array[Int], Int, Array[Int]] {
 
-        override def compute(vertex: Vertex[LongValue, Int], messages: MessageIterator[Int]): Unit = {
+        override def compute(vertex: Vertex[LongValue, Array[Int]], messages: MessageIterator[Array[Int]]): Unit = {            
+            var aliveNeighbors: Int = 0
+            val states: Array[Int] = vertex.getValue().asInstanceOf[Array[Int]]
+            var alive: Int = states(0)
+            var idleCountDown: Int = states(1)
 
-          var aliveNeighbors: Int = 0
-
-          while (messages.hasNext) {
-              val msg = messages.next
-              aliveNeighbors += msg
-          }
-
-          var alive = vertex.getValue
-          if ((alive == 1) && ((aliveNeighbors > 3) || (aliveNeighbors < 2))) {
-            alive = 0
-          } else if ((alive == 0) && (aliveNeighbors == 3)){
-            alive = 1
-          } 
-          setNewVertexValue(alive)
-          val it = getEdges.iterator()
-          while (it.hasNext) {
-            val edge = it.next
-            sendMessageTo(edge.getTarget, alive)
-          }
+            if (vertex.getId().getValue != 0) { // cell
+                if (idleCountDown > 1) {    // comp. interval
+                    idleCountDown -= 1
+                } else {    // communication frequency
+                    while (messages.hasNext) {
+                        val msg = messages.next.head
+                        aliveNeighbors += msg
+                    }
+                    if ((alive == 1) && ((aliveNeighbors > 3) || (aliveNeighbors < 2))) {
+                        alive = 0
+                    } else if ((alive == 0) && (aliveNeighbors == 3)){
+                        alive = 1
+                    } 
+                    setNewVertexValue(Array(alive, idleCountDown))
+                    val it = getEdges.iterator()
+                    while (it.hasNext) {
+                        val edge = it.next
+                        Range(0, cfreq).foreach(i => 
+                          sendMessageTo(edge.getTarget, Array(alive)))
+                    }
+                }
+            } else { // clock
+                val it = getEdges.iterator()
+                while (it.hasNext) {
+                    val edge = it.next
+                    sendMessageTo(edge.getTarget, Array(0))
+                }
+            }
       }
     }
 
     // message combiner
     // combinedMessage has the same type as Message
-    final class GoLCombiner extends MessageCombiner[LongValue, Int] {
+    final class GoLCombiner extends MessageCombiner[LongValue, Array[Int]] {
 
-        override def combineMessages(messages: MessageIterator[Int]): Unit = {
+        override def combineMessages(messages: MessageIterator[Array[Int]]): Unit = {
 
-            var combined: Int = 0
+            var combined: Array[Int] = Array()
 
             while (messages.hasNext) {
               val msg = messages.next
-              combined = msg + combined
+              combined = msg ++ combined
             }
             sendCombinedMessage(combined)
         }
     }
 
-    measure(() => {
+    measure.apply(() => {
       // Execute the vertex-centric iteration
       val result = graph.runVertexCentricIteration(new GoLComputeFunction(), new GoLCombiner(), maxIterations)
       // Extract the vertices as the result
       val golResult = result.getVertices
+      // Execute
       golResult.collect()
     }, maxIterations)
   }

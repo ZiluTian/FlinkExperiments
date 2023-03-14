@@ -43,7 +43,8 @@ object StockMarket {
 
     env.setParallelism(args(0).toInt)
     val edgeFilePath = args(1)
-    
+    val cfreq: Int = args(2).toInt
+    val interval: Int = args(3).toInt
     // define the maximum number of iterations
     val maxIterations = 200
 
@@ -204,46 +205,54 @@ object StockMarket {
             val rules: Array[Double] = state(4)
             var lastRule: Int = rules(5).toInt
             var nextAction: Int = rules(6).toInt
+
+            var idleCountDown: Int = state(5).head.toInt
             // assert(rules.size == 7)
 
             timer += 1 
             if (vertex.getId().getValue != 0) {  // trader 
                 cash = cash * (1 + interestRate)
-                messages.forEach(m => {
-                    val ms = m.head
-                    val m_dividendPerShare = ms(0)
-                    val m_lastAvg = ms(1)
-                    val m_currentPrice = ms(2)
-                    val m_dividendIncrease = ms(3)
-                    val m_recent10AvgInc = ms(4)
-                    val m_recent50AvgInc = ms(5)    
-                    val m_recent100AvgInc = ms(6)    
-                    val previousWealth = estimatedWealth
-                    // Update the number of shares based on the new dividend
-                    shares = shares * (1 + m_dividendPerShare)
-                    // Calculate the new estimated wealth 
-                    estimatedWealth = cash + shares * m_currentPrice
-                    // Update the strength of prev action based on the feedback of the wealth changes
-                    if (estimatedWealth > previousWealth) {
-                        rules(lastRule) += 1
-                    } else if (estimatedWealth < previousWealth) {
-                        rules(lastRule) -= 1
+                if (idleCountDown > 1) {
+                    idleCountDown -= 1
+                } else {
+                    messages.forEach(m => {
+                        val ms = m.head
+                        val m_dividendPerShare = ms(0)
+                        val m_lastAvg = ms(1)
+                        val m_currentPrice = ms(2)
+                        val m_dividendIncrease = ms(3)
+                        val m_recent10AvgInc = ms(4)
+                        val m_recent50AvgInc = ms(5)    
+                        val m_recent100AvgInc = ms(6)    
+                        val previousWealth = estimatedWealth
+                        // Update the number of shares based on the new dividend
+                        shares = shares * (1 + m_dividendPerShare)
+                        // Calculate the new estimated wealth 
+                        estimatedWealth = cash + shares * m_currentPrice
+                        // Update the strength of prev action based on the feedback of the wealth changes
+                        if (estimatedWealth > previousWealth) {
+                            rules(lastRule) += 1
+                        } else if (estimatedWealth < previousWealth) {
+                            rules(lastRule) -= 1
+                        }
+                        // Select the rule with the highest strength for the next action 
+                        val nextRule = rules.zipWithIndex.sortBy(x => x._1).head._2
+                        // Obtain the action based on the rule 
+                        val x = evalRule(nextRule, m_currentPrice, ms, cash, shares)
+                        // Update lastRule with the recently selected rule 
+                        rules(5) = nextRule
+                        // Update the last action, cash, and shares
+                        rules(6) = x._1
+                        cash = x._2
+                        shares = x._3 
+                    })
+                    idleCountDown = interval
+
+                    val it = getEdges.iterator()
+                    while (it.hasNext) {
+                        val edge = it.next
+                        Range(0, cfreq).foreach(i => sendMessageTo(edge.getTarget, Array(Array(rules(6)))))
                     }
-                    // Select the rule with the highest strength for the next action 
-                    val nextRule = rules.zipWithIndex.sortBy(x => x._1).head._2
-                    // Obtain the action based on the rule 
-                    val x = evalRule(nextRule, m_currentPrice, ms, cash, shares)
-                    // Update lastRule with the recently selected rule 
-                    rules(5) = nextRule
-                    // Update the last action, cash, and shares
-                    rules(6) = x._1
-                    cash = x._2
-                    shares = x._3 
-                })
-                val it = getEdges.iterator()
-                while (it.hasNext) {
-                    val edge = it.next
-                    sendMessageTo(edge.getTarget, Array(Array(rules(6))))
                 }
             } else {    // market
                 var buyOrders: Int = 0
@@ -286,11 +295,11 @@ object StockMarket {
                 val it = getEdges.iterator()
                 while (it.hasNext) {
                     val edge = it.next
-                    sendMessageTo(edge.getTarget, Array(Array(lastDividend, lastAvg, currentPrice, dividendIncrease, recent10AvgInc, recent50AvgInc, recent100AvgInc)))
+                    Range(0, cfreq).foreach(i => sendMessageTo(edge.getTarget, Array(Array(lastDividend, lastAvg, currentPrice, dividendIncrease, recent10AvgInc, recent50AvgInc, recent100AvgInc))))
                 }
             }
             setNewVertexValue(Array(stock_timeseries, Array(lastDividend, lastAvg, currentPrice, dividendIncrease, recent10AvgInc, recent50AvgInc, recent100AvgInc), Array(timer), 
-            Array(cash, shares, estimatedWealth), rules))
+            Array(cash, shares, estimatedWealth), rules, Array(idleCountDown)))
       }
     }
 
@@ -309,14 +318,12 @@ object StockMarket {
         }
     }
 
-    // Execute the vertex-centric iteration
-    val result = graph.runVertexCentricIteration(new StockMarketComputeFunction(), new StockMarketCombiner(), maxIterations)
-
-    // Extract the vertices as the result
-    val simulation = result.getVertices
-
-    // execute
-    simulation.collect()
-    // simulation.print()
+    measure(() => {
+        // Execute the vertex-centric iteration
+        val result = graph.runVertexCentricIteration(new StockMarketComputeFunction(), new StockMarketCombiner(), maxIterations)
+        // Extract the vertices as the result
+        val simulation = result.getVertices
+        simulation.collect()
+    }, maxIterations)
   }
 }
