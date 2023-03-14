@@ -82,7 +82,7 @@ object StockMarket {
             val traderState = Array(cash, shares, estimatedWealth)
 
             val rules = Array(0, 0, 0, 0, 0.0, Random.nextInt(5), 0)   // 5 rules and their respective strength, initially 0; most recent rule
-            Array(stock_timeseries, marketState, timer, traderState, rules)
+            Array(stock_timeseries, marketState, timer, traderState, rules, Array(interval))
         }
     })
 
