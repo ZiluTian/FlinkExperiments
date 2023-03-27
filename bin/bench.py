@@ -63,8 +63,8 @@ if (__name__ == "__main__"):
     for i in range(REPEAT):
         ITERATION = i
         if (experiment == "cfreq"):
-            run(50, CFRES, [1])
+            run([50], CFRES, [1])
         elif (experiment == "cint"):
-            run(50, [1], CINT)
+            run([50], [1], CINT)
         elif (experiment == "tuning"):
             run(CORES, [1], [1])
