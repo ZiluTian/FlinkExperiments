@@ -5,22 +5,22 @@ import os
 import sys
 from datetime import datetime
 
+# user input
 MICRO_BENCHMARK = ""
 
 def run(cores, cfreqs, cintervals):
-    # Comm. freq experiments
     for core in cores:
         for cfreq in cfreqs:
             for cint in cintervals:
-                for workload in EXPERIMENTS:
-                    for input_file in config[workload]['input_graph']:
-                        print(f"Running {workload} cores {core} communication frequency is {cfreq} computation interval is {cint}")
-                        cp = config[workload]["classpath"]
+                for experiment in EXPERIMENTS:
+                    for input_file in config[experiment]['input_graph']:
+                        print(f"Running {experiment} cores {core} communication frequency is {cfreq} computation interval is {cint}")
+                        cp = config[experiment]["classpath"]
                         now = datetime.now()
                         current_time = now.strftime("%H%M%S")
                         if not os.path.exists(f"{LOG_DIR}/{ITERATION}"):
                             os.makedirs(f"{LOG_DIR}/{ITERATION}")
-                        log_file = open(f"{LOG_DIR}/{ITERATION}/{MICRO_BENCHMARK}_{workload}_cores{core}_cfreq{cfreq}_cint{cint}_{current_time}", 'a')
+                        log_file = open(f"{LOG_DIR}/{ITERATION}/{MICRO_BENCHMARK}_{experiment}_cores{core}_cfreq{cfreq}_cint{cint}_{current_time}", 'a')
                         process = subprocess.run([f'{FLINK_HOME}/bin/flink', 'run', '-c', cp, '-Dexecution.runtime-mode=BATCH', 'target/scala-2.12/benchmark-assembly-0.1-SNAPSHOT.jar', str(core), input_file, str(cfreq), str(cint)], text=True, stdout=subprocess.PIPE, check=True)
                         print(process.stdout, file=log_file)
                         os.system('echo 3 > /proc/sys/vm/drop_caches')
@@ -28,7 +28,6 @@ def run(cores, cfreqs, cintervals):
                         log_file.close()
 
 if (__name__ == "__main__"):
-    # Call sbt assembly to geenrate a uber jar for submitting to the Flink cluster
     assemble = False
 
     for i in range(1, len(sys.argv)):
