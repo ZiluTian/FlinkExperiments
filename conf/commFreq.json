@@ -1,0 +1,27 @@
+{
+    "experiments": ["gameOfLife", "stockMarket", "ERM", "SBM"],
+    "gameOfLife": {
+        "input_graph": ["/root/FlinkExperiments/data/2DTorus_10000_graphx.txt"],
+        "classpath": "simulations.GameOfLife3"
+    },
+    "stockMarket": {
+        "input_graph": ["/root/FlinkExperiments/data/stockMarket_10000_graphx.txt"],
+        "classpath": "simulations.StockMarket"
+    },
+    "ERM": {
+        "input_graph": ["/root/FlinkExperiments/data/ERM_0.01_10000_graphx.txt"],
+        "classpath": "simulations.Epidemics"
+    },
+    "SBM": {
+        "input_graph": ["/root/FlinkExperiments/data/SBM_0.01_10000_graphx.txt"],
+        "classpath": "simulations.Epidemics"
+    },
+    "cfreqs": [1, 10, 20, 30],
+    "cinterval": [1],
+    "cores": [20],
+    "log_dir": "/root/FlinkExperiments/log/",
+    "repeat": 3,
+    "flink": {
+        "home": "/root/flink-1.16.1"
+    }
+}

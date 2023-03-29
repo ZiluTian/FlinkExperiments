@@ -1,0 +1,15 @@
+{
+    "experiments": ["gameOfLife"],
+    "gameOfLife": {
+        "input_graph": ["/root/FlinkExperiments/data/2DTorus_10000_graphx.txt"],
+        "classpath": "simulations.GameOfLife3"
+    },
+    "cfreqs": [1],
+    "cinterval": [1],
+    "cores": [20],
+    "log_dir": "/root/FlinkExperiments/log/",
+    "repeat": 1,
+    "flink": {
+        "home": "/root/flink-1.16.1"
+    }
+}
