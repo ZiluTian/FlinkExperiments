@@ -12,7 +12,7 @@ The driver script for starting a benchmark is `/bin/bench.py`. Prior to running 
 
 ```python3 bin/bench.py -a -t test```.
 
-As a reference, you can checkout the performance of our measurement in `benchmark/`.
+As a reference, you can checkout our measured performance in `benchmark/`.
 
 ### Remark
 Before running a benchmark, you should already have the Flink cluster up and running. Our experiments were done using Flink 1.16.1 on CentOS 7. We used a cluster of servers, each with 24 cores (two Xeon processors, 48 hardware threads, supporting hyper-threading), 256GB of RAM, and 400GB of SSD. To obtain the best performance, you need to tune the configuration of Flink in `conf/flink-conf.yaml` (this is defined in Flink, *not* part of our benchmark configuration.) In our experiments, the performance improvement mainly came from increasing the process memory size for the task manager in Flink (`taskmanager.memory.process.size: 172800m`) and the number of task slots `taskmanager.numberOfTaskSlots: 100`. 
