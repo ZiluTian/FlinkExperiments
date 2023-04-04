@@ -8,9 +8,9 @@ The source code for implementing each of these simulations in Flink as a vertex 
 ### Benchmark
 Our paper included the following benchmark experiments in Flink: tuning, scaleup, scaleout, communication frequency, and computation interval. For each of the benchmark, you can find its corresponding configuration in `conf/`, which is necessary for launching a benchmark. The input graphs are not included here due to their size, but you should be able to easily generate them based on our description in the paper.
 
-The driver script for starting a benchmark is `/bin/bench.py`. Prior to running a benchmark, you need to compile and assemble the vertex programs. Our benchmark script automates this for you by passing `-a`. In short, to compile and assemble the vertex program and then running a benchmark named {test}, you should enter the following command (tested with python3.9, but you can easily adjust the driver script to use other versions of Python):
+The driver script for starting a benchmark is `/bin/bench.py`. Prior to running a benchmark, the vertex programs need to be compiled and assembled to create a uber jar that will be run on the cluster. Our benchmark script automatically cleans existing jar, if any, and creates a new jar. If undesired ,you can disable this default behavior in `/bin/bench.py`. In short, to compile and assemble the vertex program and then running a benchmark named {test}, you should enter the following command (tested with python3.9, but you can easily adjust the driver script to use other versions of Python):
 
-```python3 bin/bench.py -a -t test```.
+```python3 bin/bench.py -t test```.
 
 As a reference, you can checkout our measured performance in `benchmark/`.
 
