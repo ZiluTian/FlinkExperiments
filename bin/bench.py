@@ -7,6 +7,7 @@ from datetime import datetime
 
 # user input
 MICRO_BENCHMARK = ""
+UBER_JAR = "target/scala-2.12/benchmark-assembly-0.1-SNAPSHOT.jar"
 
 def run(cores, cfreqs, cintervals):
     for core in cores:
@@ -21,7 +22,7 @@ def run(cores, cfreqs, cintervals):
                         if not os.path.exists(f"{LOG_DIR}/{ITERATION}"):
                             os.makedirs(f"{LOG_DIR}/{ITERATION}")
                         log_file = open(f"{LOG_DIR}/{ITERATION}/{MICRO_BENCHMARK}_{experiment}_cores{core}_cfreq{cfreq}_cint{cint}_{current_time}", 'a')
-                        process = subprocess.run([f'{FLINK_HOME}/bin/flink', 'run', '-c', cp, '-Dexecution.runtime-mode=BATCH', 'target/scala-2.12/benchmark-assembly-0.1-SNAPSHOT.jar', str(core), input_file, str(cfreq), str(cint)], text=True, stdout=subprocess.PIPE, check=True)
+                        process = subprocess.run([f'{FLINK_HOME}/bin/flink', 'run', '-c', cp, '-Dexecution.runtime-mode=BATCH', UBER_JAR, str(core), input_file, str(cfreq), str(cint)], text=True, stdout=subprocess.PIPE, check=True)
                         print(process.stdout, file=log_file)
                         os.system('echo 3 > /proc/sys/vm/drop_caches')
                         log_file.flush()
@@ -50,11 +51,13 @@ if (__name__ == "__main__"):
 
     FLINK_HOME=config['flink']['home']
    
-    subprocess.run(['mkdir', '-p', LOG_DIR], text=True, stdout=subprocess.PIPE, check=True)
+    if (not os.path.exists(LOG_DIR)):
+        os.makedirs(f"{LOG_DIR}")
     
-    if (assemble):
-        subprocess.run(['sbt', 'assembly'], text=True, stdout=subprocess.PIPE, check=True)
-        print(f"Assemble jar file for deployment completed")
+    # Always clean the build before running experiments, which removes the uber jar
+    subprocess.run(['sbt', 'clean'])
+    # Generate the uber jar after
+    subprocess.run(['sbt', 'assembly'], text=True, stdout=subprocess.PIPE, check=True)
 
     for i in range(REPEAT):
         ITERATION = i

@@ -19,7 +19,7 @@
     "cfreqs": [1, 10, 20, 30],
     "cinterval": [1],
     "cores": [20],
-    "log_dir": "/root/FlinkExperiments/log/",
+    "log_dir": "log",
     "repeat": 3,
     "flink": {
         "home": "/root/flink-1.16.1"
